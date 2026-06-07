@@ -17,6 +17,7 @@ import java.time.temporal.WeekFields
 
 data class AvailabilityUiState(
     val isLoading: Boolean = true,
+    val isRefreshing: Boolean = false,
     val isSaving: Boolean = false,
     val loadFailed: Boolean = false,
     val loadErrorMessage: String? = null,
@@ -72,6 +73,34 @@ class AvailabilityViewModel(
                             loadFailed = true,
                             loadErrorMessage = result.userMessage,
                         )
+                    }
+                }
+            }
+        }
+    }
+
+    fun refreshCurrentMonth() {
+        if (_uiState.value.isRefreshing) return
+
+        viewModelScope.launch {
+            val month = _uiState.value.currentMonth
+            _uiState.update {
+                it.copy(
+                    isRefreshing = true,
+                    loadFailed = false,
+                    loadErrorMessage = null,
+                )
+            }
+
+            when (val result = repository.loadAvailability(month)) {
+                is AvailabilityRepository.LoadResult.Success -> {
+                    availabilityByMonth = availabilityByMonth + result.availabilityByMonth
+                    applyMonth(month, isRefreshing = false)
+                }
+
+                is AvailabilityRepository.LoadResult.Error -> {
+                    _uiState.update {
+                        it.copy(isRefreshing = false)
                     }
                 }
             }
@@ -245,11 +274,13 @@ class AvailabilityViewModel(
         month: YearMonth,
         isSaving: Boolean = false,
         saveErrorMessage: String? = null,
+        isRefreshing: Boolean = false,
     ) {
         val serverDays = repository.monthAvailabilityFrom(availabilityByMonth, month)
         _uiState.update {
             it.copy(
                 isLoading = false,
+                isRefreshing = isRefreshing,
                 isSaving = isSaving,
                 currentMonth = month,
                 days = displayDaysForMonth(month),

@@ -43,6 +43,7 @@ import nl.nextlevelpilots.companion.availability.ui.defaultDayStyles
 import nl.nextlevelpilots.companion.availability.ui.handleCalendarDayClick
 import nl.nextlevelpilots.companion.availability.ui.styleFor
 import nl.nextlevelpilots.companion.availability.ui.withBulkEditEnabled
+import nl.nextlevelpilots.companion.ui.PremiumPullRefresh
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -102,14 +103,19 @@ fun AvailabilityScreen(
             .background(ScreenBackground),
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp)
-                    .padding(top = 24.dp, bottom = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(24.dp),
+            PremiumPullRefresh(
+                isRefreshing = uiState.isRefreshing,
+                onRefresh = viewModel::refreshCurrentMonth,
+                modifier = Modifier.weight(1f),
             ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 16.dp)
+                        .padding(top = 24.dp, bottom = 20.dp),
+                    verticalArrangement = Arrangement.spacedBy(24.dp),
+                ) {
                 AvailabilityMonthHeader(
                     month = uiState.currentMonth,
                     onPreviousMonth = viewModel::previousMonth,
@@ -132,7 +138,7 @@ fun AvailabilityScreen(
                 )
 
                 when {
-                    uiState.isLoading -> {
+                    uiState.isLoading && !uiState.isRefreshing -> {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -184,6 +190,7 @@ fun AvailabilityScreen(
                             AvailabilityCalendarLegend(theme = calendarTheme)
                         }
                     }
+                }
                 }
             }
 

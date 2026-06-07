@@ -5,6 +5,7 @@ import com.google.gson.JsonElement
 import com.google.gson.annotations.SerializedName
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 import java.util.Locale
 
 data class LessonsResponse(
@@ -299,6 +300,19 @@ fun formatLessonDate(date: LocalDate, locale: Locale = Locale.forLanguageTag("nl
 fun formatLessonDateShort(date: LocalDate, locale: Locale = Locale.forLanguageTag("nl-NL")): String {
     val formatter = DateTimeFormatter.ofPattern("d MMM", locale)
     return date.format(formatter)
+}
+
+fun formatRelativeLessonDate(
+    date: LocalDate,
+    today: LocalDate = LocalDate.now(),
+): String {
+    val daysBetween = ChronoUnit.DAYS.between(today, date)
+    return when (daysBetween) {
+        0L -> "Vandaag"
+        1L -> "Morgen"
+        in 2L..Int.MAX_VALUE.toLong() -> "Over $daysBetween dagen"
+        else -> formatLessonDate(date)
+    }
 }
 
 fun groupLessonsByDate(lessons: List<LessonUiModel>): List<LessonDateGroup> {

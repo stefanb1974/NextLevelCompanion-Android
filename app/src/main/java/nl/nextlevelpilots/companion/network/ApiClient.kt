@@ -3,6 +3,7 @@ package nl.nextlevelpilots.companion.network
 import com.google.gson.Gson
 import nl.nextlevelpilots.companion.auth.AuthApi
 import nl.nextlevelpilots.companion.availability.AvailabilityApi
+import nl.nextlevelpilots.companion.documents.DocumentsApi
 import nl.nextlevelpilots.companion.lessons.LessonsApi
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -30,6 +31,7 @@ object ApiClient {
     val authApi: AuthApi = retrofit.create(AuthApi::class.java)
     val availabilityApi: AvailabilityApi = retrofit.create(AvailabilityApi::class.java)
     val lessonsApi: LessonsApi = retrofit.create(LessonsApi::class.java)
+    val documentsApi: DocumentsApi = retrofit.create(DocumentsApi::class.java)
 
     private fun ensureTrailingSlash(url: String): String =
         if (url.endsWith("/")) url else "$url/"

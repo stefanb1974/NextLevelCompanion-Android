@@ -13,6 +13,7 @@ import nl.nextlevelpilots.companion.auth.SessionStore
 
 data class LessonsUiState(
     val isLoading: Boolean = true,
+    val isRefreshing: Boolean = false,
     val loadFailed: Boolean = false,
     val errorMessage: String? = null,
     val allLessons: List<LessonUiModel> = emptyList(),
@@ -65,6 +66,32 @@ class LessonsViewModel(
                             lessonsByDate = emptyList(),
                             nextUpcomingLesson = null,
                         )
+                    }
+                }
+            }
+        }
+    }
+
+    fun refreshLessons() {
+        if (_uiState.value.isRefreshing) return
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isRefreshing = true) }
+
+            when (val result = repository.loadLessons()) {
+                is LessonsRepository.LoadResult.Success -> {
+                    applyLessons(
+                        lessons = result.lessons,
+                        isLoading = false,
+                        loadFailed = false,
+                        errorMessage = null,
+                        isRefreshing = false,
+                    )
+                }
+
+                is LessonsRepository.LoadResult.Error -> {
+                    _uiState.update {
+                        it.copy(isRefreshing = false)
                     }
                 }
             }
@@ -129,11 +156,13 @@ class LessonsViewModel(
         isLoading: Boolean,
         loadFailed: Boolean,
         errorMessage: String?,
+        isRefreshing: Boolean = false,
     ) {
         val upcomingLessons = filterUpcomingLessons(lessons)
         _uiState.update {
             it.copy(
                 isLoading = isLoading,
+                isRefreshing = isRefreshing,
                 loadFailed = loadFailed,
                 errorMessage = errorMessage,
                 allLessons = lessons,

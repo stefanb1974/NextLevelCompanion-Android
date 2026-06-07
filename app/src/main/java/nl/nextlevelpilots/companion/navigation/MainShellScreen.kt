@@ -39,6 +39,9 @@ import androidx.navigation.navArgument
 import nl.nextlevelpilots.companion.availability.AvailabilityScreen
 import nl.nextlevelpilots.companion.dashboard.DashboardScreen
 import nl.nextlevelpilots.companion.dashboard.TabPlaceholderContent
+import nl.nextlevelpilots.companion.documents.DocumentPdfViewerScreen
+import nl.nextlevelpilots.companion.documents.DocumentsScreen
+import nl.nextlevelpilots.companion.documents.DocumentsViewModel
 import nl.nextlevelpilots.companion.lessons.LessonDetailScreen
 import nl.nextlevelpilots.companion.lessons.LessonsScreen
 import nl.nextlevelpilots.companion.lessons.LessonsViewModel
@@ -55,7 +58,11 @@ fun MainShellScreen(
     val lessonsViewModel: LessonsViewModel = viewModel(
         factory = LessonsViewModel.factory(LocalContext.current),
     )
+    val documentsViewModel: DocumentsViewModel = viewModel(
+        factory = DocumentsViewModel.factory(LocalContext.current),
+    )
     val lessonsState by lessonsViewModel.uiState.collectAsState()
+    val documentsState by documentsViewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val navBackStackEntry by shellNavController.currentBackStackEntryAsState()
     val showBottomNav = navBackStackEntry?.destination?.route == ShellRoutes.MAIN
@@ -67,6 +74,12 @@ fun MainShellScreen(
         val message = lessonsState.snackbarMessage ?: return@LaunchedEffect
         snackbarHostState.showSnackbar(message)
         lessonsViewModel.clearSnackbar()
+    }
+
+    LaunchedEffect(documentsState.snackbarMessage) {
+        val message = documentsState.snackbarMessage ?: return@LaunchedEffect
+        snackbarHostState.showSnackbar(message)
+        documentsViewModel.clearSnackbar()
     }
 
     Box(
@@ -102,6 +115,13 @@ fun MainShellScreen(
                         userRole = userRole,
                         onLessonClick = { lessonId ->
                             shellNavController.navigate(ShellRoutes.lessonDetail(lessonId))
+                        },
+                    )
+
+                    MainTab.DOCUMENTS -> DocumentsScreen(
+                        viewModel = documentsViewModel,
+                        onDocumentClick = { documentId ->
+                            shellNavController.navigate(ShellRoutes.documentPdfViewer(documentId))
                         },
                     )
 
@@ -142,6 +162,20 @@ fun MainShellScreen(
                 LessonDetailScreen(
                     lessonId = lessonId,
                     viewModel = lessonsViewModel,
+                    onBack = { shellNavController.popBackStack() },
+                )
+            }
+
+            composable(
+                route = ShellRoutes.DOCUMENT_PDF_VIEWER,
+                arguments = listOf(
+                    navArgument("documentId") { type = NavType.StringType },
+                ),
+            ) { backStackEntry ->
+                val documentId = backStackEntry.arguments?.getString("documentId").orEmpty()
+                DocumentPdfViewerScreen(
+                    documentId = documentId,
+                    viewModel = documentsViewModel,
                     onBack = { shellNavController.popBackStack() },
                 )
             }

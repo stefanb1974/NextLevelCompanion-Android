@@ -32,6 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import nl.nextlevelpilots.companion.ui.PremiumPullRefresh
 
 private val LightGrey = Color(0xFFB8BCD4)
 private val GlassBackground = Color.White.copy(alpha = 0.06f)
@@ -48,13 +49,19 @@ fun LessonsScreen(
     modifier: Modifier = Modifier,
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp, vertical = 32.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+
+    PremiumPullRefresh(
+        isRefreshing = uiState.isRefreshing,
+        onRefresh = viewModel::refreshLessons,
+        modifier = modifier.fillMaxSize(),
     ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp, vertical = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
         Text(
             text = "Trainingen",
             color = Color.White,
@@ -70,7 +77,7 @@ fun LessonsScreen(
         )
 
         when {
-            uiState.isLoading -> {
+            uiState.isLoading && uiState.lessonsByDate.isEmpty() && !uiState.loadFailed -> {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -105,6 +112,7 @@ fun LessonsScreen(
                     )
                 }
             }
+        }
         }
     }
 }
