@@ -13,3 +13,8 @@
 .externalNativeBuild
 .cxx
 local.properties
+.idea/workspace.xml
+local.properties
+build/
+app/build/
+.gradle/
