@@ -14,7 +14,7 @@ enum class MainTab(
 ) {
     HOME("Home", Icons.Default.Home),
     TRAINING("Trainingen", Icons.Default.School),
-    DOCUMENTS("Documenten", Icons.Default.Description),
     AVAILABILITY("Beschikbaarheid", Icons.Default.CalendarMonth),
+    DOCUMENTS("Documenten", Icons.Default.Description),
     PROFILE("Profiel", Icons.Default.Person),
 }

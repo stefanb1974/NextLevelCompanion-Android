@@ -5,10 +5,9 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -50,12 +49,12 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.abs
 
-private val ScreenBackground = Color(0xFFF4F5F8)
+private val ScreenBackground = Color(0xFFF5F5F9)
 private val CardWhite = Color.White
 private val TextPrimary = Color(0xFF1C1C1E)
 private val TextSecondary = Color(0xFF8E8E93)
 private val NavButtonBackground = Color(0xFFE8EAEF)
-private val AccentOrange = Color(0xFFFF7A3D)
+private val AccentOrange = Color(0xFFFF8B56)
 private val AccentOrangeLight = Color(0xFFFFC090)
 private val CalendarCardShape = RoundedCornerShape(28.dp)
 private val SaveButtonShape = RoundedCornerShape(24.dp)
@@ -108,89 +107,103 @@ fun AvailabilityScreen(
                 onRefresh = viewModel::refreshCurrentMonth,
                 modifier = Modifier.weight(1f),
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 16.dp)
-                        .padding(top = 24.dp, bottom = 20.dp),
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(
+                        start = 20.dp,
+                        end = 20.dp,
+                        top = 24.dp,
+                        bottom = 20.dp,
+                    ),
                     verticalArrangement = Arrangement.spacedBy(24.dp),
                 ) {
-                AvailabilityMonthHeader(
-                    month = uiState.currentMonth,
-                    onPreviousMonth = viewModel::previousMonth,
-                    onNextMonth = viewModel::nextMonth,
-                )
-
-                AvailabilityTopControls(
-                    currentMonth = uiState.currentMonth,
-                    onGoToToday = {
-                        navigateToMonth(
-                            current = uiState.currentMonth,
-                            target = YearMonth.now(),
-                            onPrevious = viewModel::previousMonth,
-                            onNext = viewModel::nextMonth,
-                        )
-                    },
-                    onInfoClick = { showInfoDialog = true },
-                    bulkEditEnabled = bulkEditEnabled,
-                    onBulkEditChanged = { bulkEditEnabled = it },
-                )
-
-                when {
-                    uiState.isLoading && !uiState.isRefreshing -> {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 64.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            CircularProgressIndicator(
-                                color = AccentOrange,
-                                strokeWidth = 2.5.dp,
-                            )
-                        }
-                    }
-
-                    uiState.loadFailed -> {
-                        AvailabilityLoadErrorState(
-                            message = uiState.loadErrorMessage
-                                ?: AvailabilityRepository.LOAD_ERROR_MESSAGE,
-                            onRetry = viewModel::loadAvailability,
+                    item {
+                        AvailabilityMonthHeader(
+                            month = uiState.currentMonth,
+                            onPreviousMonth = viewModel::previousMonth,
+                            onNextMonth = viewModel::nextMonth,
                         )
                     }
 
-                    else -> {
-                        if (uiState.saveErrorMessage != null) {
-                            AvailabilitySaveErrorBanner(
-                                message = uiState.saveErrorMessage!!,
-                            )
-                        }
+                    item {
+                        AvailabilityTopControls(
+                            currentMonth = uiState.currentMonth,
+                            onGoToToday = {
+                                navigateToMonth(
+                                    current = uiState.currentMonth,
+                                    target = YearMonth.now(),
+                                    onPrevious = viewModel::previousMonth,
+                                    onNext = viewModel::nextMonth,
+                                )
+                            },
+                            onInfoClick = { showInfoDialog = true },
+                            bulkEditEnabled = bulkEditEnabled,
+                            onBulkEditChanged = { bulkEditEnabled = it },
+                        )
+                    }
 
-                        Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
-                            AvailabilityMonthCalendar(
-                                gridState = calendarGridState,
-                                theme = calendarTheme,
-                                interactionMode = interactionState.mode,
-                                onDayClick = { date ->
-                                    handleCalendarDayClick(
-                                        date = date,
-                                        interactionState = interactionState,
-                                        onInteractionStateChange = { interactionState = it },
-                                        onSingleDayTap = viewModel::onDayTapped,
+                    when {
+                        uiState.isLoading && !uiState.isRefreshing -> {
+                            item {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 64.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    CircularProgressIndicator(
+                                        color = AccentOrange,
+                                        strokeWidth = 2.5.dp,
                                     )
-                                },
-                                onDayLongClick = { date ->
-                                    timeEditorTarget = TimeEditorTarget.Single(date)
-                                },
-                                onSwipePreviousMonth = viewModel::previousMonth,
-                                onSwipeNextMonth = viewModel::nextMonth,
-                            )
+                                }
+                            }
+                        }
 
-                            AvailabilityCalendarLegend(theme = calendarTheme)
+                        uiState.loadFailed -> {
+                            item {
+                                AvailabilityLoadErrorState(
+                                    message = uiState.loadErrorMessage
+                                        ?: AvailabilityRepository.LOAD_ERROR_MESSAGE,
+                                    onRetry = viewModel::loadAvailability,
+                                )
+                            }
+                        }
+
+                        else -> {
+                            if (uiState.saveErrorMessage != null) {
+                                item {
+                                    AvailabilitySaveErrorBanner(
+                                        message = uiState.saveErrorMessage!!,
+                                    )
+                                }
+                            }
+
+                            item {
+                                AvailabilityMonthCalendar(
+                                    gridState = calendarGridState,
+                                    theme = calendarTheme,
+                                    interactionMode = interactionState.mode,
+                                    onDayClick = { date ->
+                                        handleCalendarDayClick(
+                                            date = date,
+                                            interactionState = interactionState,
+                                            onInteractionStateChange = { interactionState = it },
+                                            onSingleDayTap = viewModel::onDayTapped,
+                                        )
+                                    },
+                                    onDayLongClick = { date ->
+                                        timeEditorTarget = TimeEditorTarget.Single(date)
+                                    },
+                                    onSwipePreviousMonth = viewModel::previousMonth,
+                                    onSwipeNextMonth = viewModel::nextMonth,
+                                )
+                            }
+
+                            item {
+                                AvailabilityCalendarLegend(theme = calendarTheme)
+                            }
                         }
                     }
-                }
                 }
             }
 
@@ -199,7 +212,7 @@ fun AvailabilityScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(ScreenBackground)
-                        .padding(horizontal = 16.dp),
+                        .padding(horizontal = 20.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     MultiDayActionPanel(

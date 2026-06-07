@@ -1,12 +1,11 @@
 package nl.nextlevelpilots.companion.documents
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -31,7 +30,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
@@ -41,12 +39,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import nl.nextlevelpilots.companion.ui.CompanionCard
+import nl.nextlevelpilots.companion.ui.CompanionDesign
 
-private val LightGrey = Color(0xFFB8BCD4)
-private val GlassBackground = Color.White.copy(alpha = 0.08f)
-private val GlassBorder = Color.White.copy(alpha = 0.14f)
-private val AccentOrange = Color(0xFFFF8B56)
-private val CardShape = RoundedCornerShape(28.dp)
 private val PageShape = RoundedCornerShape(12.dp)
 
 @Composable
@@ -90,12 +85,12 @@ fun DocumentPdfViewerScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         CircularProgressIndicator(
-                            color = AccentOrange,
+                            color = CompanionDesign.Accent,
                             strokeWidth = 2.5.dp,
                         )
                         Text(
                             text = "PDF laden…",
-                            color = LightGrey,
+                            color = CompanionDesign.TextSecondary,
                             fontSize = 15.sp,
                         )
                     }
@@ -120,7 +115,7 @@ fun DocumentPdfViewerScreen(
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(
-                        horizontal = 16.dp,
+                        horizontal = CompanionDesign.ScreenPadding,
                         vertical = 16.dp,
                     ),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -130,11 +125,9 @@ fun DocumentPdfViewerScreen(
                         key = { index, _ -> "$documentId-page-$index" },
                     ) { index, pageBitmap ->
                         Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .border(1.dp, GlassBorder, PageShape),
+                            modifier = Modifier.fillMaxWidth(),
                             shape = PageShape,
-                            colors = CardDefaults.cardColors(containerColor = Color.White),
+                            colors = CardDefaults.cardColors(containerColor = CompanionDesign.CardWhite),
                             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                         ) {
                             Image(
@@ -167,20 +160,20 @@ private fun DocumentPdfTopBar(
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = "Terug",
-                tint = Color.White,
+                tint = CompanionDesign.Navy,
             )
         }
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = "Document",
-                color = LightGrey,
+                color = CompanionDesign.TextSecondary,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium,
                 letterSpacing = 0.5.sp,
             )
             Text(
                 text = title,
-                color = Color.White,
+                color = CompanionDesign.Navy,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 2,
@@ -198,17 +191,10 @@ private fun DocumentPdfErrorState(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .padding(CompanionDesign.ScreenPadding),
         contentAlignment = Alignment.Center,
     ) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .border(1.dp, GlassBorder, CardShape),
-            shape = CardShape,
-            colors = CardDefaults.cardColors(containerColor = GlassBackground),
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        ) {
+        CompanionCard(modifier = Modifier.fillMaxWidth()) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -218,7 +204,7 @@ private fun DocumentPdfErrorState(
             ) {
                 Text(
                     text = message,
-                    color = Color.White,
+                    color = CompanionDesign.TextPrimary,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Medium,
                     textAlign = TextAlign.Center,
@@ -228,11 +214,11 @@ private fun DocumentPdfErrorState(
                     onClick = onRetry,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(52.dp),
-                    shape = RoundedCornerShape(18.dp),
+                        .height(48.dp),
+                    shape = CompanionDesign.ButtonShape,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = AccentOrange,
-                        contentColor = Color.White,
+                        containerColor = CompanionDesign.Accent,
+                        contentColor = CompanionDesign.CardWhite,
                     ),
                 ) {
                     Text(

@@ -177,6 +177,32 @@ class DocumentsViewModel(
         _pdfViewerState.value = DocumentPdfViewerUiState()
     }
 
+    fun downloadDocumentOffline(documentId: String) {
+        viewModelScope.launch {
+            when (
+                val result = repository.downloadDocument(
+                    documentId = documentId,
+                    cacheDir = DocumentsRepository.documentsCacheDir(appContext),
+                )
+            ) {
+                is DocumentsRepository.DownloadResult.Success -> {
+                    _uiState.update {
+                        it.copy(snackbarMessage = "Document opgeslagen voor offline gebruik")
+                    }
+                }
+
+                is DocumentsRepository.DownloadResult.Error -> {
+                    _uiState.update {
+                        it.copy(
+                            snackbarMessage = result.userMessage
+                                ?: DocumentsRepository.DOWNLOAD_ERROR_MESSAGE,
+                        )
+                    }
+                }
+            }
+        }
+    }
+
     fun clearSnackbar() {
         _uiState.update { it.copy(snackbarMessage = null) }
     }

@@ -27,7 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-private val AccentOrange = Color(0xFFFF7A3D)
+private val AccentOrange = Color(0xFFFF8B56)
 private val AccentOrangeLight = Color(0xFFFFC090)
 private val ConfirmedGreenBackground = Color(0xFFB8F0CE)
 private val ConfirmedGreenText = Color(0xFF137A3A)

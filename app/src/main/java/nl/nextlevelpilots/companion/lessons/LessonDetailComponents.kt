@@ -3,18 +3,13 @@ package nl.nextlevelpilots.companion.lessons
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
-private val LabelGrey = Color(0xFF9AA3BC)
-private val ValueWhite = Color(0xFFE8EBF5)
-private val AccentOrange = Color(0xFFFF8B56)
+import androidx.compose.material3.Text
+import nl.nextlevelpilots.companion.ui.CompanionDesign
 
 @Composable
 fun LessonDetailFields(
@@ -33,7 +28,7 @@ fun LessonDetailFields(
             lesson.title?.let { title ->
                 Text(
                     text = title,
-                    color = Color.White,
+                    color = CompanionDesign.Navy,
                     fontSize = 21.sp,
                     fontWeight = FontWeight.SemiBold,
                     lineHeight = 26.sp,
@@ -44,7 +39,7 @@ fun LessonDetailFields(
         if (showDate) {
             Text(
                 text = formatLessonDate(lesson.date),
-                color = AccentOrange,
+                color = CompanionDesign.Accent,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -52,7 +47,7 @@ fun LessonDetailFields(
 
         Text(
             text = lesson.timeRangeLabel,
-            color = if (showTitle || showDate) ValueWhite else AccentOrange,
+            color = if (showTitle || showDate) CompanionDesign.TextPrimary else CompanionDesign.Accent,
             fontSize = if (showTitle || showDate) 16.sp else 15.sp,
             fontWeight = FontWeight.SemiBold,
         )
@@ -89,14 +84,14 @@ fun LessonDetailLabelRow(
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Text(
             text = label,
-            color = LabelGrey,
+            color = CompanionDesign.TextSecondary,
             fontSize = 12.sp,
             fontWeight = FontWeight.Medium,
             letterSpacing = 0.2.sp,
         )
         Text(
             text = value,
-            color = ValueWhite,
+            color = CompanionDesign.TextPrimary,
             fontSize = 15.sp,
             fontWeight = FontWeight.Normal,
             lineHeight = 20.sp,
@@ -114,30 +109,27 @@ private fun LessonDetailStatusSection(
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(
                 text = "Status",
-                color = LabelGrey,
+                color = CompanionDesign.TextSecondary,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium,
                 letterSpacing = 0.2.sp,
             )
-            when {
-                lesson.isUserConfirmed -> {
-                    LessonConfirmedBadge()
-                }
-
-                else -> {
-                    LessonStatusBadge(
-                        label = lesson.statusLabel,
-                        status = lesson.status,
-                    )
-                }
-            }
+            LessonStatusBadge(
+                label = lesson.statusLabel,
+                status = lesson.status,
+            )
         }
 
-        if (lesson.canConfirm && lesson.apiId != null && onConfirmLesson != null) {
-            LessonConfirmButton(
-                onClick = { onConfirmLesson(lesson.apiId) },
-                isLoading = isConfirming,
-            )
+        when {
+            lesson.canConfirm && lesson.apiId != null && onConfirmLesson != null -> {
+                LessonConfirmButton(
+                    onClick = { onConfirmLesson(lesson.apiId) },
+                    isLoading = isConfirming,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+
+            lesson.isConfirmed -> LessonConfirmedBadge()
         }
     }
 }

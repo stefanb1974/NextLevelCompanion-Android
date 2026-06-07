@@ -42,9 +42,9 @@ import nl.nextlevelpilots.companion.availability.parseTime
 
 private val TextPrimary = Color(0xFF1C1C1E)
 private val TextSecondary = Color(0xFF8E8E93)
-private val AccentOrange = Color(0xFFFF7A3D)
+private val AccentOrange = Color(0xFFFF8B56)
 private val CardWhite = Color.White
-private val TimeFieldBackground = Color(0xFFF4F5F8)
+private val TimeFieldBackground = Color(0xFFF5F5F9)
 
 private enum class TimeEditorOption {
     FULL_DAY,

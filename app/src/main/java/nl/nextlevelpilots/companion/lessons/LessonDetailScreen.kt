@@ -1,6 +1,5 @@
 package nl.nextlevelpilots.companion.lessons
 
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,12 +8,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -23,17 +19,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
-private val LightGrey = Color(0xFFB8BCD4)
-private val GlassBackground = Color.White.copy(alpha = 0.08f)
-private val GlassBorder = Color.White.copy(alpha = 0.14f)
-private val AccentOrange = Color(0xFFFF8B56)
-private val CardShape = RoundedCornerShape(28.dp)
+import nl.nextlevelpilots.companion.ui.CompanionCard
+import nl.nextlevelpilots.companion.ui.CompanionDesign
 
 @Composable
 fun LessonDetailScreen(
@@ -49,7 +39,7 @@ fun LessonDetailScreen(
         modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp, vertical = 24.dp),
+            .padding(horizontal = CompanionDesign.ScreenPadding, vertical = 24.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
         Row(
@@ -61,13 +51,13 @@ fun LessonDetailScreen(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Terug",
-                    tint = Color.White,
+                    tint = CompanionDesign.Navy,
                     modifier = Modifier.size(24.dp),
                 )
             }
             Text(
                 text = "Training",
-                color = LightGrey,
+                color = CompanionDesign.TextSecondary,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
                 letterSpacing = 1.sp,
@@ -84,9 +74,7 @@ fun LessonDetailScreen(
             }
 
             else -> {
-                LessonDetailHeader(
-                    lesson = lesson,
-                )
+                LessonDetailHeader(lesson = lesson)
 
                 LessonDetailMainCard(
                     lesson = lesson,
@@ -109,7 +97,7 @@ private fun LessonDetailHeader(
     ) {
         Text(
             text = lesson.title ?: "Training",
-            color = Color.White,
+            color = CompanionDesign.Navy,
             fontSize = 28.sp,
             fontWeight = FontWeight.Bold,
             lineHeight = 34.sp,
@@ -130,24 +118,11 @@ private fun LessonDetailMainCard(
     confirmingLessonId: String?,
     onConfirmLesson: (String) -> Unit,
 ) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .shadow(
-                elevation = 12.dp,
-                shape = CardShape,
-                ambientColor = Color.Black.copy(alpha = 0.25f),
-                spotColor = Color.Black.copy(alpha = 0.2f),
-            )
-            .border(1.dp, GlassBorder, CardShape),
-        shape = CardShape,
-        colors = CardDefaults.cardColors(containerColor = GlassBackground),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-    ) {
+    CompanionCard(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 26.dp),
+                .padding(CompanionDesign.CardPadding),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             LessonDetailLabelRow(
@@ -215,7 +190,7 @@ private fun LessonDetailConfirmationSection(
     ) {
         Text(
             text = "Bevestiging",
-            color = Color(0xFF9AA3BC),
+            color = CompanionDesign.TextSecondary,
             fontSize = 12.sp,
             fontWeight = FontWeight.Medium,
             letterSpacing = 0.2.sp,
@@ -240,7 +215,7 @@ private fun LessonDetailConfirmationSection(
             else -> {
                 Text(
                     text = "Bevestiging niet beschikbaar",
-                    color = LightGrey,
+                    color = CompanionDesign.TextSecondary,
                     fontSize = 14.sp,
                 )
             }
@@ -252,20 +227,13 @@ private fun LessonDetailConfirmationSection(
 private fun LessonDetailMessageCard(
     message: String,
 ) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(1.dp, GlassBorder, CardShape),
-        shape = CardShape,
-        colors = CardDefaults.cardColors(containerColor = GlassBackground),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-    ) {
+    CompanionCard(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = message,
-            color = Color.White,
+            color = CompanionDesign.TextPrimary,
             fontSize = 16.sp,
             fontWeight = FontWeight.Medium,
-            modifier = Modifier.padding(28.dp),
+            modifier = Modifier.padding(CompanionDesign.CardPadding),
         )
     }
 }

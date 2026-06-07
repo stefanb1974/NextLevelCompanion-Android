@@ -94,7 +94,11 @@ class AvailabilityViewModel(
 
             when (val result = repository.loadAvailability(month)) {
                 is AvailabilityRepository.LoadResult.Success -> {
-                    availabilityByMonth = availabilityByMonth + result.availabilityByMonth
+                    availabilityByMonth = repository.replaceMonthsInCache(
+                        existing = availabilityByMonth,
+                        incoming = result.availabilityByMonth,
+                    )
+                    reconcilePendingChangesWithServer(month)
                     applyMonth(month, isRefreshing = false)
                 }
 
@@ -327,6 +331,19 @@ class AvailabilityViewModel(
         } else {
             pendingChanges[date] = newAvailability
         }
+    }
+
+    private fun reconcilePendingChangesWithServer(month: YearMonth) {
+        pendingChanges.keys
+            .filter { YearMonth.from(it) == month }
+            .toList()
+            .forEach { date ->
+                val serverAvailability = serverAvailabilityFor(date)
+                val pendingAvailability = pendingChanges[date] ?: return@forEach
+                if (pendingAvailability == serverAvailability) {
+                    pendingChanges.remove(date)
+                }
+            }
     }
 
     companion object {

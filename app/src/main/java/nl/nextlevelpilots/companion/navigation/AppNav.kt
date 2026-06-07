@@ -51,11 +51,13 @@ fun AppNav(
             val userName by sessionStore.userNameFlow.collectAsState(initial = null)
             val userEmail by sessionStore.userEmailFlow.collectAsState(initial = null)
             val userRole by sessionStore.userRoleFlow.collectAsState(initial = null)
+            val linkedPersonId by sessionStore.linkedPersonIdFlow.collectAsState(initial = null)
 
             MainShellScreen(
                 userName = userName,
                 userEmail = userEmail,
                 userRole = userRole,
+                linkedPersonId = linkedPersonId,
                 onLogout = {
                     scope.launch {
                         sessionStore.clearSession()

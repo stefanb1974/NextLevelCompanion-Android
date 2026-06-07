@@ -1,30 +1,25 @@
 package nl.nextlevelpilots.companion.dashboard
 
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import nl.nextlevelpilots.companion.lessons.LessonsViewModel
+import nl.nextlevelpilots.companion.navigation.MainTab
+import nl.nextlevelpilots.companion.trainingprogress.TrainingProgressViewModel
+import nl.nextlevelpilots.companion.ui.CompanionCard
+import nl.nextlevelpilots.companion.ui.CompanionDesign
 import nl.nextlevelpilots.companion.ui.PremiumPullRefresh
 
 @Composable
@@ -33,155 +28,82 @@ fun DashboardScreen(
     userEmail: String?,
     userRole: String?,
     lessonsViewModel: LessonsViewModel,
+    trainingProgressViewModel: TrainingProgressViewModel,
     onLessonClick: (String) -> Unit = {},
+    onQuickAction: (MainTab) -> Unit = {},
+    onTrainingProgressClick: () -> Unit = {},
 ) {
     val lessonsState by lessonsViewModel.uiState.collectAsState()
-    val lightGrey = Color(0xFFB8BCD4)
-    val glassBackground = Color.White.copy(alpha = 0.06f)
-    val glassBorder = Color.White.copy(alpha = 0.12f)
-    val cardShape = RoundedCornerShape(28.dp)
-    val accentOrange = Color(0xFFFF8B56)
+    val trainingProgressState by trainingProgressViewModel.uiState.collectAsState()
+    val firstName = firstNameFrom(userName)
+    val greeting = if (firstName != null) "Hoi, $firstName" else "Hoi"
 
     PremiumPullRefresh(
         isRefreshing = lessonsState.isRefreshing,
         onRefresh = lessonsViewModel::refreshLessons,
         modifier = Modifier.fillMaxSize(),
     ) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                horizontal = CompanionDesign.ScreenPadding,
+                vertical = 24.dp,
+            ),
+            verticalArrangement = Arrangement.spacedBy(CompanionDesign.SectionSpacing),
+        ) {
+            item {
+                DashboardGreetingCard(
+                    greeting = greeting,
+                    subtitle = userEmail,
+                )
+            }
+
+            item {
+                NextTrainingHeroCard(
+                    lessonsState = lessonsState,
+                    userRole = userRole,
+                    lessonsViewModel = lessonsViewModel,
+                    onLessonClick = onLessonClick,
+                )
+            }
+
+            item {
+                DashboardQuickActions(onAction = onQuickAction)
+            }
+
+            item {
+                DashboardTrainingProgressCard(
+                    state = trainingProgressState,
+                    onClick = onTrainingProgressClick,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DashboardGreetingCard(
+    greeting: String,
+    subtitle: String?,
+) {
+    CompanionCard(modifier = Modifier.fillMaxWidth()) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp, vertical = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.padding(CompanionDesign.CardPadding),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Text(
-                text = "NextLevel Pilots",
-                color = Color.White,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-                letterSpacing = 3.sp,
+                text = greeting,
+                color = CompanionDesign.Navy,
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold,
+                lineHeight = 34.sp,
             )
-
-            Text(
-                text = "COMPANION",
-                color = lightGrey,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Medium,
-                letterSpacing = 4.sp,
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(1.dp, glassBorder, cardShape),
-                shape = cardShape,
-                colors = CardDefaults.cardColors(containerColor = glassBackground),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp),
-                ) {
-                    Text(
-                        text = if (!userName.isNullOrBlank()) {
-                            "Welkom $userName"
-                        } else {
-                            "Welkom"
-                        },
-                        color = Color.White,
-                        fontSize = 26.sp,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    if (!userEmail.isNullOrBlank()) {
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = userEmail,
-                            color = lightGrey,
-                            fontSize = 14.sp,
-                        )
-                    }
-                }
-            }
-
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(1.dp, glassBorder, cardShape),
-                shape = cardShape,
-                colors = CardDefaults.cardColors(containerColor = glassBackground),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Text(
-                        text = "Volgende training",
-                        color = Color.White,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-
-                    when {
-                        lessonsState.isLoading && lessonsState.nextUpcomingLesson == null -> {
-                            CircularProgressIndicator(
-                                modifier = Modifier
-                                    .align(Alignment.CenterHorizontally)
-                                    .padding(vertical = 8.dp),
-                                color = accentOrange,
-                                strokeWidth = 2.dp,
-                            )
-                        }
-
-                        lessonsState.nextUpcomingLesson != null -> {
-                            NextTrainingCard(
-                                lesson = lessonsState.nextUpcomingLesson!!,
-                                userRole = userRole,
-                                confirmingLessonId = lessonsState.confirmingLessonId,
-                                onConfirmLesson = lessonsViewModel::confirmLesson,
-                                onClick = { onLessonClick(lessonsState.nextUpcomingLesson!!.id) },
-                            )
-                        }
-
-                        else -> {
-                            NextTrainingEmptyState()
-                        }
-                    }
-                }
-            }
-
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(1.dp, glassBorder, cardShape),
-                shape = cardShape,
-                colors = CardDefaults.cardColors(containerColor = glassBackground),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Text(
-                        text = "Je overzicht",
-                        color = Color.White,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Text(
-                        text = "Gebruik de navigatie onderaan om trainingen, documenten, beschikbaarheid en je profiel te bekijken.",
-                        color = lightGrey,
-                        fontSize = 14.sp,
-                        lineHeight = 20.sp,
-                    )
-                }
+            if (!subtitle.isNullOrBlank()) {
+                Text(
+                    text = subtitle,
+                    color = CompanionDesign.TextSecondary,
+                    fontSize = 15.sp,
+                )
             }
         }
     }
