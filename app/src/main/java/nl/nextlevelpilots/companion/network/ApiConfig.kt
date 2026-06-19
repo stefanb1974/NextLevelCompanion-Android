@@ -8,5 +8,6 @@ object ApiConfig {
     const val DEV =
         "https://planning-dev.nextlevelpilots.nl/api"
 
+    /** Production API — no runtime environment switch; dev URL is not used by release builds. */
     const val BASE_URL = PROD
 }

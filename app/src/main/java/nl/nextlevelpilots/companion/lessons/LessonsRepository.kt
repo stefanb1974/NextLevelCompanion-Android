@@ -2,7 +2,9 @@ package nl.nextlevelpilots.companion.lessons
 
 import android.util.Log
 import nl.nextlevelpilots.companion.auth.SessionStore
+import nl.nextlevelpilots.companion.BuildConfig
 import nl.nextlevelpilots.companion.network.ApiClient
+import nl.nextlevelpilots.companion.network.ApiConfig
 import java.time.LocalDate
 
 class LessonsRepository(
@@ -32,8 +34,11 @@ class LessonsRepository(
         val fromKey = from.toString()
         val toKey = to.toString()
         val linkedPersonId = sessionStore.currentLinkedPersonId()
+        val userRole = sessionStore.currentUserRole()
 
         return try {
+            logDebug("API base URL: ${ApiConfig.BASE_URL} (BuildConfig: ${BuildConfig.API_BASE_URL})")
+            logDebug("Session role=$userRole linked_person_id=$linkedPersonId")
             logDebug("loadLessons request: from=$fromKey to=$toKey")
 
             val response = lessonsApi.getLessons(
@@ -50,9 +55,20 @@ class LessonsRepository(
 
             if (response.isSuccessful && body?.ok != false) {
                 val rawEntries = body?.data.orEmpty()
-                logRawLessons(rawEntries)
+                logRawLessons(rawEntries, linkedPersonId)
 
-                val lessons = rawEntries
+                val visibleEntries = if (isInstructorRole(userRole)) {
+                    rawEntries.filter { entry ->
+                        val assigned = entry.isAssignedToInstructor(linkedPersonId)
+                        logInstructorAssignment(entry, linkedPersonId, assigned)
+                        assigned
+                    }
+                } else {
+                    rawEntries
+                }
+                logDebug("Lessons after instructor filter: ${visibleEntries.size} of ${rawEntries.size}")
+
+                val lessons = visibleEntries
                     .mapNotNull { entry ->
                         entry.toLessonUiModel(linkedPersonId).also { lesson ->
                             if (lesson == null) {
@@ -63,6 +79,23 @@ class LessonsRepository(
                     .sortedWith(compareBy({ it.date }, { it.startTime ?: "99:99" }))
 
                 logMappedLessons(lessons)
+
+                val visibleLessons = filterVisibleLessons(lessons)
+                val upcoming = filterUpcomingLessons(visibleLessons)
+                logDebug(
+                    "Lessons pipeline: raw=${rawEntries.size}, " +
+                        "afterInstructor=${visibleEntries.size}, " +
+                        "mapped=${lessons.size}, " +
+                        "visibleAfterStatus=${visibleLessons.size}, " +
+                        "upcoming=${upcoming.size}",
+                )
+                upcoming.firstOrNull()?.let { next ->
+                    logDebug(
+                        "Next lesson: id=${next.apiId ?: next.id}, " +
+                            "date=${next.date}, time=${next.debugTimeRange}, status=${next.status}",
+                    )
+                }
+
                 LoadResult.Success(lessons = lessons)
             } else {
                 val technicalMessage = body?.error ?: errorBodyRaw ?: "HTTP ${response.code()}"
@@ -75,26 +108,51 @@ class LessonsRepository(
         }
     }
 
-    private fun logRawLessons(entries: List<LessonDto>) {
+    private fun logRawLessons(entries: List<LessonDto>, linkedPersonId: String?) {
         Log.d(DEBUG_TAG, "Received ${entries.size} raw lesson(s) from API")
         entries.forEachIndexed { index, entry ->
-            Log.d(DEBUG_TAG, "LESSON RAW:\n${bodyToJson(entry)}")
+            val additionalInstructorIds = entry.additionalInstructors
+                ?.mapNotNull { participant ->
+                    participant.instructorId ?: participant.id
+                }
+                .orEmpty()
             Log.d(
                 DEBUG_TAG,
                 buildString {
                     append("lesson[$index] ")
                     append("id=${entry.id ?: "null"}, ")
-                    append("title=${entry.data?.trainingName ?: entry.lessonType ?: "null"}, ")
-                    append("course=${entry.data?.courseName ?: "null"}, ")
-                    append("module=${entry.lessonType ?: "null"}, ")
+                    append("date=${entry.date ?: "null"}, ")
                     append("start_time=${entry.startTime ?: "null"}, ")
                     append("end_time=${entry.endTime ?: "null"}, ")
                     append("status=${entry.status ?: "null"}, ")
-                    append("confirmations=${bodyToJson(entry.confirmations)}, ")
-                    append("location=${entry.location ?: "null"}")
+                    append("instructor_id=${entry.instructorId ?: entry.data?.instructorId ?: "null"}, ")
+                    append("additionalInstructors=$additionalInstructorIds")
                 },
             )
         }
+    }
+
+    private fun logInstructorAssignment(
+        entry: LessonDto,
+        linkedPersonId: String?,
+        assigned: Boolean,
+    ) {
+        val additionalInstructorIds = entry.additionalInstructors
+            ?.mapNotNull { participant ->
+                participant.instructorId ?: participant.id
+            }
+            .orEmpty()
+        Log.d(
+            DEBUG_TAG,
+            buildString {
+                append("instructorAssignment lesson=${entry.id ?: "null"}: ")
+                append("linkedPersonId=${linkedPersonId ?: "null"}, ")
+                append("topLevelInstructorId=${entry.instructorId ?: "null"}, ")
+                append("dataInstructorId=${entry.data?.instructorId ?: "null"}, ")
+                append("additionalInstructors=$additionalInstructorIds, ")
+                append("assigned=$assigned")
+            },
+        )
     }
 
     suspend fun confirmLesson(lessonId: String): Result<Unit> {

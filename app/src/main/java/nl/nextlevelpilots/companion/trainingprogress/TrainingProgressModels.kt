@@ -10,8 +10,10 @@ import kotlin.math.roundToInt
 
 data class TrainingProgressResponse(
     val ok: Boolean? = null,
+    val role: String? = null,
     val data: JsonElement? = null,
     val courses: List<TrainingProgressCourseDto>? = null,
+    val activeStudentCount: Int? = null,
     val error: String? = null,
 )
 
@@ -58,22 +60,47 @@ fun parseTrainingProgressResponse(raw: String?): TrainingProgressResponse? {
             element.isJsonObject -> {
                 val obj = element.asJsonObject
                 val dataElement = obj.get("data")?.takeUnless { it.isJsonNull }
-                val courses = when {
-                    dataElement?.isJsonArray == true -> {
-                        dataElement.asJsonArray.mapNotNull { it.toTrainingProgressCourseDto() }
+                val role = obj.stringValue("role")
+                val parsedCourses: List<TrainingProgressCourseDto>
+                val activeStudentCount: Int?
+
+                when (role?.trim()?.lowercase()) {
+                    "instructor" -> {
+                        val students = dataElement?.parseInstructorStudents().orEmpty()
+                        activeStudentCount = students.size
+                        parsedCourses = students.flatMap { student ->
+                            student.courses.map { course ->
+                                course.copy(
+                                    courseName = listOfNotNull(student.name, course.courseName)
+                                        .joinToString(" – ")
+                                        .ifBlank { course.courseName ?: "Training" },
+                                )
+                            }
+                        }
                     }
 
-                    dataElement?.isJsonObject == true -> {
-                        dataElement.asJsonObject.parseCourseList()
-                    }
+                    else -> {
+                        activeStudentCount = null
+                        parsedCourses = when {
+                            dataElement?.isJsonArray == true -> {
+                                dataElement.asJsonArray.mapNotNull { it.toTrainingProgressCourseDto() }
+                            }
 
-                    else -> obj.parseCourseList()
+                            dataElement?.isJsonObject == true -> {
+                                dataElement.asJsonObject.parseCourseList().orEmpty()
+                            }
+
+                            else -> obj.parseCourseList().orEmpty()
+                        }
+                    }
                 }
 
                 TrainingProgressResponse(
                     ok = parseOkFlag(obj.get("ok")),
+                    role = role,
                     data = dataElement,
-                    courses = courses,
+                    courses = parsedCourses,
+                    activeStudentCount = activeStudentCount,
                     error = obj.stringValue("error"),
                 )
             }
@@ -91,6 +118,28 @@ private fun JsonObject.parseCourseList(): List<TrainingProgressCourseDto>? {
         }
     }
     return null
+}
+
+private data class TrainingProgressStudentDto(
+    val studentId: String?,
+    val name: String?,
+    val courses: List<TrainingProgressCourseDto>,
+)
+
+private fun JsonElement.parseInstructorStudents(): List<TrainingProgressStudentDto> {
+    if (!isJsonObject) return emptyList()
+    val studentsElement = asJsonObject.get("students")?.takeUnless { it.isJsonNull } ?: return emptyList()
+    if (!studentsElement.isJsonArray) return emptyList()
+
+    return studentsElement.asJsonArray.mapNotNull { element ->
+        if (!element.isJsonObject) return@mapNotNull null
+        val obj = element.asJsonObject
+        TrainingProgressStudentDto(
+            studentId = obj.stringValue("student_id") ?: obj.stringValue("studentId"),
+            name = obj.stringValue("name"),
+            courses = obj.parseCourseList().orEmpty(),
+        )
+    }
 }
 
 private fun JsonElement.toTrainingProgressCourseDto(): TrainingProgressCourseDto? {

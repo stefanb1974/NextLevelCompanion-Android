@@ -1,6 +1,7 @@
 package nl.nextlevelpilots.companion.lessons
 
 import android.content.Context
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -19,7 +20,9 @@ data class LessonsUiState(
     val allLessons: List<LessonUiModel> = emptyList(),
     val lessons: List<LessonUiModel> = emptyList(),
     val lessonsByDate: List<LessonDateGroup> = emptyList(),
+    val ongoingLesson: LessonUiModel? = null,
     val nextUpcomingLesson: LessonUiModel? = null,
+    val dashboardTrainingCardMode: DashboardTrainingCardMode = DashboardTrainingCardMode.EMPTY,
     val confirmingLessonId: String? = null,
     val snackbarMessage: String? = null,
 )
@@ -64,7 +67,9 @@ class LessonsViewModel(
                             allLessons = emptyList(),
                             lessons = emptyList(),
                             lessonsByDate = emptyList(),
+                            ongoingLesson = null,
                             nextUpcomingLesson = null,
+                            dashboardTrainingCardMode = DashboardTrainingCardMode.EMPTY,
                         )
                     }
                 }
@@ -158,22 +163,40 @@ class LessonsViewModel(
         errorMessage: String?,
         isRefreshing: Boolean = false,
     ) {
-        val upcomingLessons = filterUpcomingLessons(lessons)
+        val visibleLessons = filterVisibleLessons(lessons)
+        val upcomingLessons = filterUpcomingLessons(visibleLessons)
+        val dashboardCard = resolveDashboardTrainingCard(visibleLessons)
+        Log.d(
+            DEBUG_TAG,
+            "applyLessons: raw=${lessons.size}, visibleAfterStatus=${visibleLessons.size}, " +
+                "upcoming=${upcomingLessons.size}, " +
+                "next=${dashboardCard.nextLesson?.apiId ?: dashboardCard.nextLesson?.id ?: "none"}",
+        )
+        Log.d(
+            DASHBOARD_DEBUG_TAG,
+            "ongoingLesson=${dashboardCard.ongoingLesson?.apiId ?: dashboardCard.ongoingLesson?.id ?: "none"}, " +
+                "nextLesson=${dashboardCard.nextLesson?.apiId ?: dashboardCard.nextLesson?.id ?: "none"}, " +
+                "cardMode=${dashboardCard.mode}",
+        )
         _uiState.update {
             it.copy(
                 isLoading = isLoading,
                 isRefreshing = isRefreshing,
                 loadFailed = loadFailed,
                 errorMessage = errorMessage,
-                allLessons = lessons,
+                allLessons = visibleLessons,
                 lessons = upcomingLessons,
                 lessonsByDate = groupLessonsByDate(upcomingLessons),
-                nextUpcomingLesson = findNextUpcomingLesson(lessons),
+                ongoingLesson = dashboardCard.ongoingLesson,
+                nextUpcomingLesson = dashboardCard.nextLesson,
+                dashboardTrainingCardMode = dashboardCard.mode,
             )
         }
     }
 
     companion object {
+        private const val DEBUG_TAG = "LessonsDebug"
+        private const val DASHBOARD_DEBUG_TAG = "DashboardDebug"
         fun factory(context: Context): ViewModelProvider.Factory {
             val sessionStore = SessionStore(context.applicationContext)
             val repository = LessonsRepository(sessionStore)

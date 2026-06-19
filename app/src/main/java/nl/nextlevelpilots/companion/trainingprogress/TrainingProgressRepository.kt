@@ -3,6 +3,7 @@ package nl.nextlevelpilots.companion.trainingprogress
 import android.util.Log
 import nl.nextlevelpilots.companion.auth.SessionStore
 import nl.nextlevelpilots.companion.network.ApiClient
+import nl.nextlevelpilots.companion.network.ApiConfig
 
 class TrainingProgressRepository(
     private val sessionStore: SessionStore,
@@ -10,7 +11,11 @@ class TrainingProgressRepository(
 ) {
 
     sealed class LoadResult {
-        data class Success(val courses: List<TrainingProgressCourseUiModel>) : LoadResult()
+        data class Success(
+            val courses: List<TrainingProgressCourseUiModel>,
+            val role: String? = null,
+            val activeStudentCount: Int? = null,
+        ) : LoadResult()
 
         data class Error(
             val technicalMessage: String,
@@ -26,16 +31,28 @@ class TrainingProgressRepository(
             )
 
         return try {
+            val userRole = sessionStore.currentUserRole()
+            val linkedPersonId = sessionStore.currentLinkedPersonId()
+
             val response = trainingProgressApi.getMyTrainingProgress(authorization = bearer(token))
             val requestUrl = response.raw().request.url.toString()
             val responseCode = response.code()
             val rawBody = response.body()?.string() ?: response.errorBody()?.string()
 
+            logDebug("API base URL: ${ApiConfig.BASE_URL}")
+            logDebug("Session role=$userRole linked_person_id=$linkedPersonId")
             logDebug("getMyTrainingProgress request URL: $requestUrl")
             logDebug("getMyTrainingProgress response code: $responseCode")
             logDebug("getMyTrainingProgress response body: ${rawBody ?: "null"}")
 
             val parsed = parseTrainingProgressResponse(rawBody)
+            logDebug(
+                "training-progress parsed role=${parsed?.role ?: "null"}, " +
+                    "courses=${parsed?.courses?.size ?: 0}, " +
+                    "activeStudents=${parsed?.activeStudentCount ?: "null"}, " +
+                    "dataIsObject=${parsed?.data?.isJsonObject == true}, " +
+                    "dataIsArray=${parsed?.data?.isJsonArray == true}",
+            )
 
             if (response.isSuccessful && parsed?.ok != false) {
                 val courses = parsed?.courses.orEmpty()
@@ -48,7 +65,11 @@ class TrainingProgressRepository(
                     }
 
                 logDebug("getMyTrainingProgress mapped course count: ${courses.size}")
-                LoadResult.Success(courses = courses)
+                LoadResult.Success(
+                    courses = courses,
+                    role = parsed?.role,
+                    activeStudentCount = parsed?.activeStudentCount,
+                )
             } else {
                 val technicalMessage = parsed?.error ?: rawBody ?: "HTTP $responseCode"
                 logBackendError("getMyTrainingProgress", technicalMessage, responseCode)

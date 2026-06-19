@@ -19,6 +19,7 @@ fun LessonStatusBadge(
     modifier: Modifier = Modifier,
 ) {
     val (background, textColor) = when (status) {
+        LessonStatus.SUGGESTED -> Color(0xFFFFE4CC) to Color(0xFF8A4D00)
         LessonStatus.PLANNED -> Color(0xFFFFD9A8) to Color(0xFF8A4D00)
         LessonStatus.CONFIRMED -> Color(0xFFB8F0CE) to Color(0xFF137A3A)
         LessonStatus.COMPLETED -> Color(0xFFD4D8E8) to Color(0xFF4A4F63)

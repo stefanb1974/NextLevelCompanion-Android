@@ -4,6 +4,8 @@ import com.google.gson.Gson
 import com.google.gson.JsonElement
 import com.google.gson.annotations.SerializedName
 import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.Locale
@@ -32,31 +34,46 @@ data class LessonDto(
     val location: String? = null,
     val status: String? = null,
     val notes: String? = null,
+    @SerializedName("instructor_id")
+    val instructorId: String? = null,
     val data: LessonDataDto? = null,
+    @SerializedName(value = "additionalStudents", alternate = ["additional_students"])
     val additionalStudents: List<LessonParticipantDto>? = null,
+    @SerializedName(value = "additionalInstructors", alternate = ["additional_instructors"])
     val additionalInstructors: List<LessonParticipantDto>? = null,
     val confirmations: JsonElement? = null,
 )
 
 data class LessonDataDto(
+    @SerializedName("training_name")
     val trainingName: String? = null,
+    @SerializedName("course_name")
     val courseName: String? = null,
+    @SerializedName("trainee_name")
     val traineeName: String? = null,
+    @SerializedName("instructor_name")
     val instructorName: String? = null,
+    @SerializedName("training_id")
     val trainingId: String? = null,
+    @SerializedName("course_id")
     val courseId: String? = null,
+    @SerializedName("trainee_id")
     val traineeId: String? = null,
+    @SerializedName("instructor_id")
     val instructorId: String? = null,
 )
 
 data class LessonParticipantDto(
     val id: String? = null,
+    @SerializedName("student_id")
     val studentId: String? = null,
+    @SerializedName("instructor_id")
     val instructorId: String? = null,
     val name: String? = null,
 )
 
 enum class LessonStatus {
+    SUGGESTED,
     PLANNED,
     CONFIRMED,
     COMPLETED,
@@ -91,8 +108,7 @@ data class LessonUiModel(
     val canConfirm: Boolean =
         !apiId.isNullOrBlank() &&
             !isUserConfirmed &&
-            status != LessonStatus.CANCELLED &&
-            status != LessonStatus.COMPLETED
+            isLessonVisibleStatus(status)
 
     fun participantLabelForViewer(isInstructor: Boolean): String? {
         return if (isInstructor) traineeName else instructorName
@@ -232,9 +248,19 @@ private fun resolveAdditionalInstructorNames(dto: LessonDto): List<String> {
         .orEmpty()
 }
 
+fun LessonDto.isAssignedToInstructor(linkedPersonId: String?): Boolean {
+    if (linkedPersonId.isNullOrBlank()) return true
+    if (instructorId == linkedPersonId) return true
+    if (data?.instructorId == linkedPersonId) return true
+    return additionalInstructors?.any { participant ->
+        (participant.instructorId ?: participant.id) == linkedPersonId
+    } == true
+}
+
 fun parseLessonStatus(raw: String?): LessonStatus {
     return when (raw?.trim()?.lowercase()) {
-        "suggested", "planned", "option" -> LessonStatus.PLANNED
+        "suggested" -> LessonStatus.SUGGESTED
+        "planned", "option" -> LessonStatus.PLANNED
         "confirmed", "scheduled" -> LessonStatus.CONFIRMED
         "completed" -> LessonStatus.COMPLETED
         "cancelled", "canceled" -> LessonStatus.CANCELLED
@@ -242,25 +268,152 @@ fun parseLessonStatus(raw: String?): LessonStatus {
     }
 }
 
-fun isInstructorRole(role: String?): Boolean {
-    return role?.trim()?.lowercase() in setOf("instructor", "admin")
+fun isLessonVisibleStatus(status: LessonStatus): Boolean {
+    return status == LessonStatus.PLANNED || status == LessonStatus.CONFIRMED
+}
+
+fun filterVisibleLessons(lessons: List<LessonUiModel>): List<LessonUiModel> {
+    return lessons.filter { isLessonVisibleStatus(it.status) }
+}
+
+fun lessonEndDateTime(lesson: LessonUiModel): LocalDateTime {
+    val time = lesson.endTime ?: lesson.startTime ?: "23:59"
+    return LocalDateTime.of(lesson.date, parseLessonLocalTime(time))
+}
+
+fun lessonStartDateTime(lesson: LessonUiModel): LocalDateTime {
+    val time = lesson.startTime ?: "00:00"
+    return LocalDateTime.of(lesson.date, parseLessonLocalTime(time))
+}
+
+fun isLessonStillUpcoming(
+    lesson: LessonUiModel,
+    now: LocalDateTime = LocalDateTime.now(),
+): Boolean {
+    if (!isLessonVisibleStatus(lesson.status)) return false
+    return !lessonEndDateTime(lesson).isBefore(now)
+}
+
+fun isLessonOngoing(
+    lesson: LessonUiModel,
+    now: LocalDateTime = LocalDateTime.now(),
+): Boolean {
+    if (!isLessonVisibleStatus(lesson.status)) return false
+    val start = lessonStartDateTime(lesson)
+    val end = lessonEndDateTime(lesson)
+    return !now.isBefore(start) && !now.isAfter(end)
+}
+
+fun isLessonFuture(
+    lesson: LessonUiModel,
+    now: LocalDateTime = LocalDateTime.now(),
+): Boolean {
+    if (!isLessonVisibleStatus(lesson.status)) return false
+    return lessonStartDateTime(lesson).isAfter(now)
+}
+
+fun findOngoingLesson(
+    lessons: List<LessonUiModel>,
+    now: LocalDateTime = LocalDateTime.now(),
+): LessonUiModel? {
+    return lessons
+        .asSequence()
+        .filter { isLessonOngoing(it, now) }
+        .sortedWith(lessonTimeComparator)
+        .firstOrNull()
+}
+
+fun findNextFutureLesson(
+    lessons: List<LessonUiModel>,
+    now: LocalDateTime = LocalDateTime.now(),
+): LessonUiModel? {
+    return lessons
+        .asSequence()
+        .filter { isLessonFuture(it, now) }
+        .sortedWith(lessonTimeComparator)
+        .firstOrNull()
+}
+
+enum class DashboardTrainingCardMode {
+    ONGOING,
+    UPCOMING,
+    EMPTY,
+}
+
+fun resolveDashboardTrainingCard(
+    visibleLessons: List<LessonUiModel>,
+    now: LocalDateTime = LocalDateTime.now(),
+): DashboardTrainingCardSelection {
+    val ongoingLesson = findOngoingLesson(visibleLessons, now)
+    val nextLesson = findNextFutureLesson(visibleLessons, now)
+    val mode = when {
+        ongoingLesson != null -> DashboardTrainingCardMode.ONGOING
+        nextLesson != null -> DashboardTrainingCardMode.UPCOMING
+        else -> DashboardTrainingCardMode.EMPTY
+    }
+    return DashboardTrainingCardSelection(
+        ongoingLesson = ongoingLesson,
+        nextLesson = nextLesson,
+        mode = mode,
+    )
+}
+
+data class DashboardTrainingCardSelection(
+    val ongoingLesson: LessonUiModel?,
+    val nextLesson: LessonUiModel?,
+    val mode: DashboardTrainingCardMode,
+) {
+    val displayLesson: LessonUiModel?
+        get() = ongoingLesson ?: nextLesson
+}
+
+fun formatLessonEndsIn(
+    lesson: LessonUiModel,
+    now: LocalDateTime = LocalDateTime.now(),
+): String? {
+    val end = lessonEndDateTime(lesson)
+    if (!now.isBefore(end)) return null
+
+    val totalMinutes = ChronoUnit.MINUTES.between(now, end)
+    if (totalMinutes <= 0) return null
+
+    val hours = totalMinutes / 60
+    val minutes = totalMinutes % 60
+
+    return when {
+        hours == 0L -> {
+            if (minutes == 1L) "Eindigt over 1 minuut" else "Eindigt over $minutes minuten"
+        }
+
+        minutes == 0L -> {
+            if (hours == 1L) "Eindigt over 1 uur" else "Eindigt over $hours uur"
+        }
+
+        hours == 1L -> "Eindigt over 1 uur en $minutes minuten"
+
+        else -> "Eindigt over $hours uur en $minutes minuten"
+    }
+}
+
+private fun parseLessonLocalTime(raw: String): LocalTime {
+    val normalized = normalizeLessonTime(raw)
+    return LocalTime.parse(normalized, DateTimeFormatter.ofPattern("HH:mm"))
 }
 
 fun filterUpcomingLessons(
     lessons: List<LessonUiModel>,
-    today: LocalDate = LocalDate.now(),
+    now: LocalDateTime = LocalDateTime.now(),
 ): List<LessonUiModel> {
     return lessons
         .asSequence()
-        .filter { !it.date.isBefore(today) }
-        .filter { it.status != LessonStatus.CANCELLED }
-        .filter { it.status != LessonStatus.COMPLETED }
+        .filter(::isLessonStillUpcoming)
         .sortedWith(lessonTimeComparator)
         .toList()
 }
 
 fun LessonStatus.toDisplayLabel(): String {
     return when (this) {
+        LessonStatus.SUGGESTED -> "Voorgesteld"
         LessonStatus.PLANNED -> "Gepland"
         LessonStatus.CONFIRMED -> "Bevestigd"
         LessonStatus.COMPLETED -> "Afgerond"
@@ -302,6 +455,10 @@ fun formatLessonDateShort(date: LocalDate, locale: Locale = Locale.forLanguageTa
     return date.format(formatter)
 }
 
+fun isInstructorRole(role: String?): Boolean {
+    return role?.trim()?.lowercase() in setOf("instructor", "admin")
+}
+
 fun formatRelativeLessonDate(
     date: LocalDate,
     today: LocalDate = LocalDate.now(),
@@ -330,9 +487,9 @@ fun groupLessonsByDate(lessons: List<LessonUiModel>): List<LessonDateGroup> {
 
 fun findNextUpcomingLesson(
     lessons: List<LessonUiModel>,
-    today: LocalDate = LocalDate.now(),
+    now: LocalDateTime = LocalDateTime.now(),
 ): LessonUiModel? {
-    return filterUpcomingLessons(lessons, today).firstOrNull()
+    return filterUpcomingLessons(lessons, now).firstOrNull()
 }
 
 private val lessonTimeComparator = compareBy<LessonUiModel>(

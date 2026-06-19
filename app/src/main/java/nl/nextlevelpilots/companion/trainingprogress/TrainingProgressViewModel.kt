@@ -17,6 +17,8 @@ data class TrainingProgressUiState(
     val loadFailed: Boolean = false,
     val errorMessage: String? = null,
     val courses: List<TrainingProgressCourseUiModel> = emptyList(),
+    val role: String? = null,
+    val instructorSummary: String? = null,
 )
 
 class TrainingProgressViewModel(
@@ -48,6 +50,8 @@ class TrainingProgressViewModel(
                             loadFailed = false,
                             errorMessage = null,
                             courses = result.courses,
+                            role = result.role,
+                            instructorSummary = buildInstructorSummary(result),
                         )
                     }
                 }
@@ -80,6 +84,8 @@ class TrainingProgressViewModel(
                             loadFailed = false,
                             errorMessage = null,
                             courses = result.courses,
+                            role = result.role,
+                            instructorSummary = buildInstructorSummary(result),
                         )
                     }
                 }
@@ -107,6 +113,18 @@ class TrainingProgressViewModel(
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
                     return TrainingProgressViewModel(repository) as T
                 }
+            }
+        }
+
+        private fun buildInstructorSummary(
+            result: TrainingProgressRepository.LoadResult.Success,
+        ): String? {
+            if (result.role?.trim()?.lowercase() != "instructor") return null
+            val count = result.activeStudentCount ?: return null
+            return if (count == 1) {
+                "1 student actief"
+            } else {
+                "$count studenten actief"
             }
         }
     }

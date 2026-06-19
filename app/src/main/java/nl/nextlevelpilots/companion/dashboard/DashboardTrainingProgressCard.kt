@@ -92,13 +92,22 @@ fun DashboardTrainingProgressCard(
 
                 state.courses.isEmpty() -> {
                     Text(
-                        text = "Geen actieve trainingen",
+                        text = state.instructorSummary ?: "Geen actieve trainingen",
                         color = CompanionDesign.TextSecondary,
                         fontSize = 14.sp,
                     )
                 }
 
                 else -> {
+                    state.instructorSummary?.let { summary ->
+                        Text(
+                            text = summary,
+                            color = CompanionDesign.Accent,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+
                     state.courses.take(DASHBOARD_COURSE_LIMIT).forEach { course ->
                         DashboardCourseSummary(course = course)
                     }

@@ -80,6 +80,8 @@ class SessionStore(
 
     suspend fun currentLinkedPersonId(): String? = linkedPersonIdFlow.first()
 
+    suspend fun currentUserRole(): String? = userRoleFlow.first()
+
     companion object {
         private val KEY_TOKEN = stringPreferencesKey("token")
         private val KEY_USER_NAME = stringPreferencesKey("user_name")

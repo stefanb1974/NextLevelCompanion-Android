@@ -5,7 +5,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -18,11 +17,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import nl.nextlevelpilots.companion.lessons.DashboardTrainingCardMode
 import nl.nextlevelpilots.companion.lessons.LessonConfirmButton
 import nl.nextlevelpilots.companion.lessons.LessonConfirmedBadge
 import nl.nextlevelpilots.companion.lessons.LessonUiModel
 import nl.nextlevelpilots.companion.lessons.LessonsUiState
 import nl.nextlevelpilots.companion.lessons.LessonsViewModel
+import nl.nextlevelpilots.companion.lessons.formatLessonEndsIn
 import nl.nextlevelpilots.companion.lessons.formatRelativeLessonDate
 import nl.nextlevelpilots.companion.lessons.isInstructorRole
 import nl.nextlevelpilots.companion.ui.CompanionCard
@@ -36,6 +37,18 @@ fun NextTrainingHeroCard(
     onLessonClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val cardMode = lessonsState.dashboardTrainingCardMode
+    val displayLesson = when (cardMode) {
+        DashboardTrainingCardMode.ONGOING -> lessonsState.ongoingLesson
+        DashboardTrainingCardMode.UPCOMING -> lessonsState.nextUpcomingLesson
+        DashboardTrainingCardMode.EMPTY -> null
+    }
+    val cardTitle = when (cardMode) {
+        DashboardTrainingCardMode.ONGOING -> "Nu bezig"
+        DashboardTrainingCardMode.UPCOMING -> "Volgende training"
+        DashboardTrainingCardMode.EMPTY -> "Volgende training"
+    }
+
     CompanionCard(modifier = modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier
@@ -44,14 +57,14 @@ fun NextTrainingHeroCard(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
-                text = "Volgende training",
+                text = cardTitle,
                 color = CompanionDesign.TextSecondary,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold,
             )
 
             when {
-                lessonsState.isLoading && lessonsState.nextUpcomingLesson == null -> {
+                lessonsState.isLoading && displayLesson == null -> {
                     CircularProgressIndicator(
                         modifier = Modifier
                             .align(Alignment.CenterHorizontally)
@@ -61,13 +74,20 @@ fun NextTrainingHeroCard(
                     )
                 }
 
-                lessonsState.nextUpcomingLesson != null -> {
-                    NextTrainingCardContent(
-                        lesson = lessonsState.nextUpcomingLesson!!,
+                displayLesson != null && cardMode == DashboardTrainingCardMode.ONGOING -> {
+                    OngoingTrainingCardContent(
+                        lesson = displayLesson,
+                        onClick = { onLessonClick(displayLesson.id) },
+                    )
+                }
+
+                displayLesson != null && cardMode == DashboardTrainingCardMode.UPCOMING -> {
+                    UpcomingTrainingCardContent(
+                        lesson = displayLesson,
                         userRole = userRole,
                         confirmingLessonId = lessonsState.confirmingLessonId,
                         onConfirmLesson = lessonsViewModel::confirmLesson,
-                        onClick = { onLessonClick(lessonsState.nextUpcomingLesson!!.id) },
+                        onClick = { onLessonClick(displayLesson.id) },
                     )
                 }
 
@@ -78,7 +98,56 @@ fun NextTrainingHeroCard(
 }
 
 @Composable
-private fun NextTrainingCardContent(
+private fun OngoingTrainingCardContent(
+    lesson: LessonUiModel,
+    onClick: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick,
+            ),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = lesson.title ?: "Training",
+            color = CompanionDesign.Navy,
+            fontSize = 22.sp,
+            fontWeight = FontWeight.Bold,
+            lineHeight = 28.sp,
+        )
+
+        lesson.location?.let { location ->
+            Text(
+                text = location,
+                color = CompanionDesign.TextSecondary,
+                fontSize = 15.sp,
+            )
+        }
+
+        Text(
+            text = lesson.timeRangeLabel,
+            color = CompanionDesign.TextPrimary,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.SemiBold,
+        )
+
+        formatLessonEndsIn(lesson)?.let { endsInLabel ->
+            Text(
+                text = endsInLabel,
+                color = CompanionDesign.Accent,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+    }
+}
+
+@Composable
+private fun UpcomingTrainingCardContent(
     lesson: LessonUiModel,
     userRole: String?,
     confirmingLessonId: String?,

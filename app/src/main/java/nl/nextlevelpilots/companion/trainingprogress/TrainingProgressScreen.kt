@@ -69,7 +69,7 @@ fun TrainingProgressScreen(
 
                 uiState.courses.isEmpty() -> {
                     TrainingProgressMessageCard(
-                        message = "Geen actieve trainingen gevonden.",
+                        message = uiState.instructorSummary ?: "Geen actieve trainingen gevonden.",
                     )
                 }
 
